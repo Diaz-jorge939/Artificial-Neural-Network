@@ -25,17 +25,13 @@ class ANN():
     # making the connections from outputlayer -> hiddenlayer-> inputlayer
     def make_connections(self):
         
-        # hiddenlayer-> inputlayer
-        for node in self.hidden_layer:
-            for input_node in self.input_layer:
-                node.connections.append(input_node)
-                
-        outputlayer -> hiddenlayer->
-        for node in self.output_layer:
+        or output_node in self.output_layer:
             for hidden_node in self.hidden_layer:
-                node.connections.append(hidden_node)
+                for input_node in self.input_layer:
+                    hidden_node.connections.append(input_node)  #hidden layer connections   
+                output_node.connections.append(hidden_node)     #output layer connections
                 
-    # 
+    
     def feed_forward(self):
         
         for output_node in self.output_layer:
