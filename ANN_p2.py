@@ -35,7 +35,7 @@ class ANN():
         df: pandas dataframe
         row: specified row used to set input node collector values
     """
-    def set_inputs(self, df, row):
+    def set_inputs(self, row):
         
         try:   
             # Select a row up to the last column
@@ -57,8 +57,8 @@ class ANN():
                     hidden_node.connections.append(input_node)
                 output_node.connections.append(hidden_node)
                 
-    def feed_forward(self, df=None, exp_idx=None):
-        errors = []
+    def forward_propagation(self):
+        outputs = []
         for output_node in self.output_layer:
             j=0
             i = 0
@@ -67,15 +67,25 @@ class ANN():
                     # X = Summation(input_node i  * hidden_node j) + bias
                     hidden_node.collector += input_node.collector * self.weights['hidden_output'][i]
                     i+=1
-
                 #hidden_node.collector + bias
-                activation = self.sigmoid(hidden_node.collector)
+                output = self.sigmoid(hidden_node.collector)
+                # print(f'hidden_node {j}: {hidden_node.collector}')
+                # print(f'hidden_output {j}: {output}')
+
+                # print(f'output_node: {output} x {self.weights["output_hidden"][j]}')
+
+                output_node.collector += output * self.weights['output_hidden'][j]
+                # print(output_node.collector)
                 
-                output_node.collector += activation * self.weights['output_hidden'][j]
                 j +=1
-            errors.append(df['expected'][exp_idx]- output_node.collector)
+
+            output = self.sigmoid(output_node.collector)
+
+            # print(f'output layer node collector send this value to sigmoidal: {output_node.collector}')
+            # print(f'final output {output}')
+            outputs.append(output)
         
-        return errors
+        return outputs[0]
 
     def sigmoid(self, activation):
         return 1.0 / (1.0 + math.exp(-activation))
@@ -83,11 +93,31 @@ class ANN():
     # Calculate the derivative of an neuron output
     def transfer_derivative(self, output):
         return output * (1.0 - output)
-    def back_propogate():
-        pass
+    def back_propogate(self,error):
+        for output_node in self.output_layer:
+            pass
 
-    def train_network():
-        pass
+
+    def train_network(self, df, n_epochs, n_outputs):
+        for epoch in range(n_epochs):
+            error_sum = 0
+            for i in range(n_outputs):
+                #set inputs 
+                row = i
+                self.set_inputs(df.iloc[row, :-1])
+                output = self.forward_propagation()
+                expected_output = df['expected'][row] #expected output of current row
+                #print(output)
+                #calculate error:
+                print(f'expected output at row {i}: {expected_output}')
+                error = expected_output - output
+
+                # if error < 0.05:
+                #     print('small ahh error')
+                #     return
+                error_sum += error
+            print('>epoch=%d, lrate=%.3f, error=%.3f' % (epoch, self.lr, error_sum))
+
 
 if __name__ == '__main__':
     
@@ -111,8 +141,6 @@ if __name__ == '__main__':
     # for i in df.iloc[0,:-1]:
     #     print(i)
     
-    
-
     net.set_inputs(df,15)
 
     # for i in net.input_layer:
