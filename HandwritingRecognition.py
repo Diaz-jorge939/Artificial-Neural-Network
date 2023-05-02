@@ -1,6 +1,5 @@
 import pandas as pd
 import pickle
-import os
 import random
 import math
 
@@ -40,26 +39,17 @@ class ANN():
             i = 0
             for hidden_node in output_node.connections:
                 for input_node in hidden_node.connections:
-                    # X = Summation(input_node i  * hidden_node j) + bias
-                    hidden_node.collector += input_node.collector * self.weights['hidden_input'][i]
+                    hidden_node.collector += input_node.collector * self.weights['hidden_input'][i] + self.bias
                     i+=1
-                #hidden_node.collector + bias
-                # print(f'hidden_node {j}: {hidden_node.collector}')
-                hidden_node.collector = self.sigmoid(hidden_node.collector)
-        
-                # print(f'hidden_output {j}: {hidden_node.collector}')
 
-                # print(f'output_node: {hidden_node.collector} x {self.weights["output_hidden"][j]}')
+                hidden_node.collector = self.sigmoid(hidden_node.collector)
 
                 output_node.collector += hidden_node.collector * self.weights['output_hidden'][j] # sigmoid(hidden_node) * output_node Weight
-                # print(output_node.collector)
                 
                 j +=1
 
-            # print(f'output layer node collector send this value to sigmoidal: {output_node.collector}')
             output_node.collector = self.sigmoid(output_node.collector)
 
-            # print(f'final output {output_node.collector}')
             outputs.append(output_node.collector)
         
         #network currently designed for network with 1 output node
@@ -84,17 +74,14 @@ class ANN():
                 hidden_node_error = (self.weights['output_hidden'][k] * output_node_error) * self.transfer_derivative(hidden_node.collector)
                 for input_node in hidden_node.connections:
                     self.adjust_weights('hidden_input', i, hidden_node_error, input_node.collector)
-                    # self.adjust_weights('hidden_input', i, hidden_error)
+
                     i+=1
                 k+=1
-        # print(self.weights)
         
     def adjust_weights(self, layer, index, gradient_error, collector):
-        # print(f'adjusting weights {layer}, {index}, {gradient_error} : {self.weights[layer][index]}')
         self.weights[layer][index] = self.weights[layer][index] - self.lr * gradient_error * collector
-        # print(f'new weight: {self.weights[layer][index]}')
         
-    def train_network(self, df, n_epochs, n_outputs, n_inputs):
+    def train_network(self, df, n_epochs, n_outputs, target_error):
         for epoch in range(n_epochs):
             error_sum = 0.0
 
@@ -107,7 +94,6 @@ class ANN():
                     self.input_layer[j].collector = val
                     j += 1
                     
-
                 output = self.forward_propagation()
 
                 error = (df[0][row] - output)**2
@@ -115,34 +101,57 @@ class ANN():
 
                 self.back_propogate(error)
 
-            if error_sum/(epoch+1) <= 0.05:
+            if error_sum/(epoch+1) <= target_error:
                 print("Target Error Reached error=%.3f" % ( error_sum/(epoch+1)))
                 return
 
             print('>epoch=%d, lrate=%.3f, error=%.3f' % (epoch, self.lr, error_sum/(epoch+1)))
 
+        # Make a prediction with a network
+    # def predict(self, row, threshold):
+    #     #set input layer
+    #     j=0
+    #     for val in df.iloc[row, 1:]:
+    #         self.input_layer[j].collector = val
+    #         j += 1
+
+    #     output = self.forward_propagate()
+
+    #     if output > threshold:
+    #         #output is greater than threshold then it guessed correctly
+    #         return 1
+    #     #else it guessed wrong
+    #     return 0
 
 if __name__ == '__main__':
     
     df = pd.read_csv('A_Z Handwritten Data.csv', header=None)
 
-    #filtering by column value. col = 0 -> letter a 
-    df = df[df[0] == 0]
-    
+    print
+    #filtering table by column value. 
+    df = df[df[0] == 25]
 
-    # print(df.to_string(max_rows=10,max_cols=10))
-
-    # normalizes data
+    #normalizes data
     df = df.div(255.0)
+
+    # 1000 random rows selected for training 
+    training_df = df.sample(n=1000)
+
+    #print(training_df.to_string(max_rows=10,max_cols=10))
+
+    training_df = training_df.reset_index(drop=True)
+
+    testing_df = df.sample(n=200)
+
+    testing_df = testing_df.reset_index(drop=True)
 
     lr = 0.01
     net = ANN(784,98,1,lr)
-    
-    n_inputs = 784
-    n_outputs = len(df)
-    
-    n_epochs = 10
 
     net.make_connections()
 
-    net.train_network(df, n_epochs, n_outputs, n_inputs)
+    net.train_network(df=training_df, n_epochs=1000, n_outputs=len(training_df), target_error=.05)
+
+    # for row in range(len(testing_df)):
+    #     prediction = net.predict(testing_df.iloc[row, 1:], 0.5)
+    #     print('Expected=%d, Got=%d' % (testing_df[row][0], prediction))
